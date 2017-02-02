@@ -44,79 +44,111 @@ class Acceron(object):
   def acceler(self):
     r = rospy.Rate(3)
     while not rospy.is_shutdown():
+      # Roombaの状況把握
+      # バンパから読み込み
+      self.bot.sensors(7)
+      self.bump = self.bot.SCI.Read(1)
+      self.bump = struct.unpack('B', self.bump)
       # stateに応じた動作 =====================================
-      # 走行状態
       if self.state.current() == 'Running':
-        # Roombaの状況把握
-        # バンパから読み込み
-        self.bot.sensors(7)
-        self.bump = self.bot.SCI.Read(1)
-        self.bump = struct.unpack('B', self.bump)
-        # 取得したバンパーの状態から状態遷移
-        if self.bump[0] != 0:
+        if self.bump[0] == 3:
           self.bot.drive_straight(0)
           self.state.transition('Collision')
+        elif self.bump[0] == 1:
+          self.bot.drive_straight(0)
+          time.sleep(0.5)
+          self.bot.drive_straight(-100)
+          time.sleep(1)
+          self.bot.drive(100, 1)
+          time.sleep(0.5)
+        elif self.bump[0] == 2:
+          self.bot.drive_straight(0)
+          time.sleep(0.5)
+          self.bot.drive_straight(-100)
+          time.sleep(1)
+          self.bot.drive(100, -1)
+          time.sleep(0.5)
         else:
           self.bot.drive_straight(250)
-      # 衝突状態
       elif self.state.current() == 'Collision':
-        # 下がる
+        # ちょっと下がる
         self.bot.drive_straight(-100)
-        time.sleep(0.5)
+        time.sleep(1)
         self.bot.drive_straight(0)
         self.state.transition('Avoiding')
-      # 回避状態
       elif self.state.current() == 'Avoiding':
-        # 右側で衝突した場合
-        if self.bump[0] == 1:
-          self.bot.drive(100, 1)
-          time.sleep(0.5)
-          self.bot.drive_straight(0)
-        # 左側で衝突した場合
-        elif self.bump[0] == 2:
+        # 周りに信号を送り，走れそうな方向を探す
+        arround = []
+        # 右斜め前を向く =======================
+        """self.bot.drive(100, -1)
+        time.sleep(0.85)
+        self.bot.drive_straight(0)
+        time.sleep(0.5)
+        # 超音波センサから読み込み
+        self.subscribe_uss()
+        arround.append(self.uss)"""
+        # 右を向く =============================
+        self.bot.drive(100, -1)
+        time.sleep(1.72)
+        self.bot.drive_straight(0)
+        time.sleep(0.5)
+        # 超音波センサから読み込み
+        self.subscribe_uss()
+        arround.append(self.uss)
+        # 左斜め前を向く =======================
+        """self.bot.drive(100, 1)
+        time.sleep(2.66)
+        self.bot.drive_straight(0)
+        time.sleep(0.8)
+        # 超音波センサから読み込み
+        self.subscribe_uss()
+        arround.insert(0, self.uss)"""
+        # 左を向く =============================
+        self.bot.drive(100, 1)
+        time.sleep(3.4)
+        self.bot.drive_straight(0)
+        time.sleep(1)
+        # 超音波センサから読み込み
+        self.subscribe_uss()
+        arround.insert(0, self.uss)
+
+        # 周りが何かしらあれば終了
+        arround_min = min(arround)
+        if arround_min >= 6:
+          self.state.transition('Goal')
+          print arround
+          continue
+
+        # 超音波が返る時間が長い方向を向く
+        if arround[0] == arround_min:
           self.bot.drive(100, -1)
-          time.sleep(0.5)
-          self.bot.drive_straight(0)
-        # 正面衝突した場合
-        elif self.bump[0] == 3:
-          # 周りに信号を送り，走れそうな方向を探す
-          arround = []
-          # 右を向く =============================
-          self.bot.drive(100, -1)
-          time.sleep(1.72)
-          self.bot.drive_straight(0)
-          # 超音波センサから読み込み
-          self.subscribe_uss()
-          arround.append(self.uss)
-          # 左を向く =============================
-          self.bot.drive(100, 1)
           time.sleep(3.4)
           self.bot.drive_straight(0)
-          # 超音波センサから読み込み
-          self.subscribe_uss()
-          arround.insert(0, self.uss)
-
-          # 周りが何かしらあれば終了
-          arround_min = min(arround)
-          if arround_min >= 6:
-            self.state.transition('Goal')
-            print arround
-            continue
-
-          # 超音波が返る時間が長い方向を向く
-          if arround[0] == arround_min:
-            self.bot.drive(100, -1)
-            time.sleep(3.4)
+        """
+        for x in range(0, 2):
+          if arround[x] == arround_min:
+            if x != 0:
+              self.bot.drive(100, -1)
+            if x == 0:
+              pass
+            elif x == 1:
+              time.sleep(3.4)
+            elif x == 2:
+              time.sleep(2.66)
+            elif x == 3:
+              time.sleep(3.4)
             self.bot.drive_straight(0)
-
-          self.state.transition('Running')
-      # ゴール状態
+            break
+          else:
+            pass
+         """
+        self.state.transition('Running')
       elif self.state.current() == 'Goal':
         if self.goal == False:
           self.goal = True
           print "Goal!"
 
-      # stateに応じた動作ここまで =================
+      # stateに応じた動作ここまで ==================================
 
       # 状態送出
       msg = Length()
