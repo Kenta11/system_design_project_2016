@@ -28,6 +28,7 @@ def UltraSonicSensor():
   GPIO.setup(16, GPIO.IN)
   GPIO.setup(12, GPIO.IN)
 
+  # Basys2からGPIOへ送られた信号をPublish
   while not rospy.is_shutdown():
     if GPIO.input(6) == 1:
       data = 7
