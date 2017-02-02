@@ -1,4 +1,4 @@
-  # The MIT License
+# The MIT License
 #
 # Copyright (c) 2007 Damon Kohler
 # Copyright (c) 2015 Jonathan Le Roux (Modifications for Create 2)
