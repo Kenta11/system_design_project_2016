@@ -116,7 +116,7 @@ class Acceron(object):
           self.goal = True
           print "Goal!"
 
-      # stateに応じた動作ここまで ==================================
+      # stateに応じた動作ここまで =================
 
       # 状態送出
       msg = Length()
